@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F3F5EF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pappe Cami">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="Il menù di Camilla per novembre e dicembre 2026: pasti, merende e dosi giorno per giorno.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Pappe di Camilla</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+/* Layout: one-column phone app, sticky day header, bottom tab bar; meals ordered by time of day. */
+:root {
+  --bg: #F3F5EF;
+  --surface: #FFFFFF;
+  --ink: #1E2B2A;
+  --muted: #5D6B68;
+  --line: #DDE3D8;
+  --accent: #3F7458;
+  --accent-soft: #E1EEE5;
+  --new: #B4446C;
+  --new-soft: #F8E3EB;
+  --c-cb: #E9A23B; --c-cr: #B65A3C; --c-pes: #3C7FB6; --c-leg: #7A8B2E;
+  --c-form: #C8A23A; --c-uovo: #E0B400; --c-none: #9AA5A2;
+  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131A19; --surface: #1C2524; --ink: #E7EEEA; --muted: #9DABA7; --line: #2C3836;
+    --accent: #7DC29C; --accent-soft: #1F3A2D; --new: #F08BB0; --new-soft: #3E2230;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131A19; --surface: #1C2524; --ink: #E7EEEA; --muted: #9DABA7; --line: #2C3836;
+  --accent: #7DC29C; --accent-soft: #1F3A2D; --new: #F08BB0; --new-soft: #3E2230;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg); color: var(--ink); font: 17px/1.5 var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+.app { max-width: 560px; margin: 0 auto; min-height: 100%;
+  padding: calc(env(safe-area-inset-top) + 12px) max(16px, env(safe-area-inset-right)) calc(96px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+h1, h2, h3 { font-family: var(--display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: 30px; font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 22px; font-weight: 700; }
+h3 { font-size: 17px; font-weight: 700; }
+p { margin: 0; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+.view { display: none; flex-direction: column; gap: 16px; }
+.view.on { display: flex; }
+
+/* Day header */
+.dayhead { display: flex; flex-direction: column; gap: 10px; }
+.kicker { font-size: 14px; color: var(--muted); font-weight: 700; letter-spacing: 0.02em; }
+.daynav { display: flex; align-items: center; gap: 8px; }
+.daynav h1 { flex: 1; }
+.iconbtn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface);
+  display: grid; place-items: center; font-size: 20px; }
+.iconbtn:disabled { opacity: .35; cursor: default; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+  font-size: 13px; font-weight: 700; background: var(--accent-soft); color: var(--accent); }
+.chip.today { background: var(--accent); color: var(--surface); border: 0; }
+button.chip { border: 0; }
+.note { font-size: 15px; color: var(--muted); }
+
+/* Meals */
+.meals { display: flex; flex-direction: column; gap: 10px; }
+.meal { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px;
+  display: grid; grid-template-columns: 82px 1fr; gap: 4px 10px; }
+.meal .when { font-size: 13px; font-weight: 700; color: var(--muted); padding-top: 3px; }
+.meal .what { display: flex; flex-direction: column; gap: 8px; }
+.meal.main { border-left: 6px solid var(--cat, var(--line)); padding-left: 14px; }
+.meal.snack { padding-top: 10px; padding-bottom: 10px; }
+.dish { font-size: 18px; line-height: 1.4; }
+.side { font-size: 15px; color: var(--muted); }
+.side b { color: var(--ink); font-weight: 700; }
+.cat { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--cat); }
+.new { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+  background: var(--new-soft); color: var(--new); border-radius: 6px; padding: 1px 6px; vertical-align: 2px; margin-left: 2px; }
+.fest { font-weight: 700; color: var(--new); }
+.dose { background: var(--accent-soft); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.dose h3 { color: var(--accent); }
+.dose ul { margin: 0; padding-left: 18px; font-size: 15px; }
+
+/* Calendar */
+.seg { display: flex; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px; gap: 4px; }
+.seg button { flex: 1; border: 0; background: none; padding: 8px 0; border-radius: 999px; font-weight: 700; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+.week { display: flex; flex-direction: column; gap: 6px; }
+.week h3 { font-size: 14px; color: var(--muted); padding: 6px 2px 0; }
+.row { display: grid; grid-template-columns: 48px 1fr; gap: 10px; align-items: start; text-align: left;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; width: 100%; }
+.row.is-today { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.row .dnum { font-family: var(--display); font-weight: 700; font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums; }
+.row .dname { font-size: 12px; color: var(--muted); font-weight: 700; text-transform: uppercase; }
+.row .lines { display: flex; flex-direction: column; gap: 4px; font-size: 14.5px; line-height: 1.35; }
+.row .ln { display: flex; gap: 8px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cat); flex: none; margin-top: 6px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Reference pages */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.card p, .card li { font-size: 15.5px; }
+.card ul, .card ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 15px; }
+.tbl th, .tbl td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.tbl th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.tbl td:nth-child(2) { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tbl small { display: block; color: var(--muted); font-weight: 400; }
+.sched { display: grid; grid-template-columns: auto 1fr 1fr; gap: 6px 10px; font-size: 15px; align-items: center; }
+.sched .h { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
+.pill { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Tab bar */
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line);
+  padding: 6px max(8px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); }
+.tabs nav { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.tabs a { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; border-radius: 12px;
+  text-decoration: none; color: var(--muted); font-size: 12px; font-weight: 700; }
+.tabs a svg { width: 24px; height: 24px; }
+.tabs a[aria-current="page"] { color: var(--accent); background: var(--accent-soft); }
+@media (prefers-reduced-motion: no-preference) { .meal, .row { transition: border-color .2s; } }
+</style>
+</head>
+<body>
+<div class="app">
+
+<section class="view" id="v-oggi" aria-label="Menù del giorno">
+  <div class="dayhead">
+    <div class="kicker" id="kicker">Menù di Camilla</div>
+    <div class="daynav">
+      <button class="iconbtn" id="prev" aria-label="Giorno precedente">‹</button>
+      <h1 id="dtitle">Domenica 1 novembre</h1>
+      <button class="iconbtn" id="next" aria-label="Giorno successivo">›</button>
+    </div>
+    <div class="chips" id="dchips"></div>
+    <p class="note" id="dnote"></p>
+  </div>
+  <div class="meals" id="meals"></div>
+  <div class="dose" id="dosebox"></div>
+</section>
+
+<section class="view" id="v-calendario" aria-label="Calendario">
+  <h1>Calendario</h1>
+  <div class="seg" role="group" aria-label="Mese">
+    <button id="m11" aria-pressed="true">Novembre</button>
+    <button id="m12" aria-pressed="false">Dicembre</button>
+  </div>
+  <div class="legend" id="legend"></div>
+  <div id="cal" class="view on" style="gap:14px"></div>
+</section>
+
+<section class="view" id="v-dosi" aria-label="Dosi e schema">
+  <h1>Dosi e schema</h1>
+  <div class="card">
+    <h2>Dosi per pasto</h2>
+    <p class="note">Peso a crudo. Indicano quanto offrire: è Camilla a decidere quanto mangiare.</p>
+    <div style="overflow-x:auto">
+    <table class="tbl">
+      <thead><tr><th>Alimento</th><th>Dose</th></tr></thead>
+      <tbody>
+        <tr><td>Cereale, pastina, pasta piccola, riso<small>3–4 cucchiai rasi</small></td><td>30–40 g</td></tr>
+        <tr><td>Verdura nella pappa o nel piatto<small>3–4 cucchiai colmi</small></td><td>60–80 g</td></tr>
+        <tr><td>Verdura da prendere con le mani<small>una manciata</small></td><td>30–40 g</td></tr>
+        <tr><td>Carne fresca<small>2 polpettine piccole · 30–40 g a dicembre</small></td><td>30 g</td></tr>
+        <tr><td>Pesce bianco<small>un filetto piccolo</small></td><td>40–50 g</td></tr>
+        <tr><td>Legumi secchi<small>oppure 40–50 g già cotti</small></td><td>15–20 g</td></tr>
+        <tr><td>Tuorlo d'uovo<small>1 volta a settimana</small></td><td>1 sodo</td></tr>
+        <tr><td>Crescenza, robiola</td><td>30–40 g</td></tr>
+        <tr><td>Parmigiano come proteina<small>2–3 cucchiaini</small></td><td>10–15 g</td></tr>
+        <tr><td>Olio extravergine, a crudo</td><td>5 ml</td></tr>
+        <tr><td>Frutta (merenda)<small>mezza mela o pera, mezza banana</small></td><td>80–100 g</td></tr>
+        <tr><td>Yogurt bianco intero</td><td>60 g</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Proteine della settimana</h2>
+    <p class="note">14 pasti: 2 carne bianca, 2 carne rossa, 3 pesce, 3 legumi, 1 tuorlo, 1 formaggio, 2 cene senza proteina.</p>
+    <div class="sched" id="sched"></div>
+  </div>
+  <div class="card">
+    <h2>Come cambiano le consistenze</h2>
+    <ol>
+      <li><b>1–15 novembre · pappa più densa.</b> Brodo 120–150 ml, carne fresca macinata fine cotta nella pappa.</li>
+      <li><b>16–30 novembre · pappa risottata.</b> Brodo 80–100 ml, polpettine morbide, legumi schiacciati.</li>
+      <li><b>1–15 dicembre · piatto asciutto.</b> Al massimo 50 ml di acqua di cottura, proteina a pezzetti a parte.</li>
+      <li><b>16–31 dicembre · piatto di famiglia.</b> Gli stessi piatti di mamma e papà, porzione tolta prima di salare.</li>
+    </ol>
+  </div>
+</section>
+
+<section class="view" id="v-consigli" aria-label="Consigli">
+  <h1>Consigli</h1>
+  <div class="card">
+    <h2>Preparazioni di base</h2>
+    <ul>
+      <li><b>Macinato nella pappa:</b> 30 g cotti nel brodo per 10–15 minuti, poi mescolati.</li>
+      <li><b>Polpettine morbide:</b> macinato e un cucchiaio di patata lessa schiacciata, senza albume e senza sale. Al vapore o nel pomodoro.</li>
+      <li><b>Legumi:</b> ammollo e cottura lunga senza sale, poi passati o schiacciati togliendo le bucce.</li>
+      <li><b>Pesce:</b> al vapore o al forno, controllando le spine con le dita.</li>
+      <li><b>Piatti di famiglia:</b> cucinate senza sale e togliete la sua porzione prima di salare. Niente dado né brodi pronti.</li>
+      <li><b>Pane:</b> a basso contenuto di sale, come il pane toscano sciocco.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2>Sicurezza a tavola</h2>
+    <ul>
+      <li>Sempre seduta sul seggiolone e con un adulto accanto.</li>
+      <li>Cibi tondi (uva, pomodorini, olive, mirtilli) tagliati in quarti per lungo. Frutta secca solo in crema.</li>
+      <li>Mela cruda grattugiata o cotta. Clementina e kiwi senza pellicina, a pezzi piccoli.</li>
+      <li>Le verdure da prendere con le mani devono schiacciarsi tra pollice e indice.</li>
+      <li>I conati sono normali. Il soffocamento è silenzioso: utile un corso di disostruzione pediatrica.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2>Da evitare prima dei 12 mesi</h2>
+    <p>Sale, zucchero, miele, latte vaccino come bevanda (yogurt e parmigiano vanno bene), salumi, dadi e brodi pronti, pesce spada, tonno fresco, palombo, dolci delle feste.</p>
+  </div>
+  <div class="card">
+    <h2>Da chiedere alla pediatra</h2>
+    <ul>
+      <li>Si può passare all'uovo intero ben cotto, albume compreso?</li>
+      <li>Va continuata la vitamina D fino all'anno?</li>
+      <li>Che latte usare di giorno dopo il rientro al lavoro della mamma, se servirà?</li>
+    </ul>
+    <p class="note">Sentitela prima se l'appetito resta basso per più di una settimana, se bagna meno pannolini o se torna la febbre.</p>
+  </div>
+</section>
+
+</div>
+
+<div class="tabs">
+  <nav aria-label="Sezioni">
+    <a href="#oggi" data-v="oggi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 13h16a8 8 0 0 1-16 0Z"/><path d="M12 13V4M9 6c0-1.5 1.3-2 3-2"/></svg>Oggi</a>
+    <a href="#calendario" data-v="calendario"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Calendario</a>
+    <a href="#dosi" data-v="dosi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 20h14l-2-11H7Z"/><path d="M9 9V7a3 3 0 0 1 6 0v2"/></svg>Dosi</a>
+    <a href="#consigli" data-v="consigli"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></svg>Consigli</a>
+  </nav>
+</div>
+
+<script>
+const DATA = [{"d": "2026-11-01", "p": 1, "lc": "cr", "cc": "none", "l": "Crema di riso + zucca schiacciata + macinato di vitello cotto nella pappa · a parte: bastoncini di carota", "c": "Crema di farro + broccoli schiacciati · a parte: bastoncini di zucchina", "mm": "mela", "mp": "yogurt"}, {"d": "2026-11-02", "p": 1, "lc": "cb", "cc": "leg", "l": "Stelline + carota e patata schiacciate + macinato di pollo cotto nella pappa · a parte: bastoncini di zucca", "c": "Crema di avena + cavolfiore schiacciato + lenticchie rosse passate · a parte: cimette di broccolo", "mm": "pera", "mp": "yogurt"}, {"d": "2026-11-03", "p": 1, "lc": "pes", "cc": "form", "l": "Crema di mais e tapioca + bietola *(nuovo)* schiacciata + nasello sfilacciato · a parte: spicchi di patata", "c": "Anellini + spinaci schiacciati + crescenza sciolta nella pappa · a parte: cimette di cavolfiore", "mm": "banana", "mp": "mela"}, {"d": "2026-11-04", "p": 1, "lc": "cr", "cc": "none", "l": "Multicereali + zucchine schiacciate + macinato di manzo cotto nella pappa · a parte: bastoncini di finocchio", "c": "Crema di riso + bietola schiacciata · a parte: bastoncini di carota", "mm": "pera", "mp": "yogurt"}, {"d": "2026-11-05", "p": 1, "lc": "leg", "cc": "pes", "l": "Crema di farro + zucca schiacciata + ceci passati · a parte: bastoncini di zucchina", "c": "Stelline + broccoli schiacciati + merluzzo sfilacciato · a parte: bastoncini di zucca", "mm": "banana", "mp": "mela"}, {"d": "2026-11-06", "p": 1, "lc": "cb", "cc": "uovo", "l": "Crema di avena + carota e patata schiacciate + macinato di tacchino cotto nella pappa · a parte: cimette di broccolo", "c": "Crema di mais e tapioca + cavolfiore schiacciato + tuorlo sodo sbriciolato · a parte: spicchi di patata", "mm": "pera", "mp": "yogurt"}, {"d": "2026-11-07", "p": 1, "lc": "pes", "cc": "leg", "l": "Anellini + spinaci schiacciati + orata *(nuovo)* sfilacciata · a parte: cimette di cavolfiore", "c": "Multicereali + zucchine schiacciate + piselli passati · a parte: bastoncini di finocchio", "mm": "banana", "mp": "mela"}, {"d": "2026-11-08", "p": 1, "lc": "cr", "cc": "none", "l": "Crema di riso + bietola schiacciata + macinato di vitello cotto nella pappa · a parte: bastoncini di carota", "c": "Crema di farro + zucca schiacciata · a parte: bastoncini di zucchina", "mm": "pera", "mp": "yogurt"}, {"d": "2026-11-09", "p": 1, "lc": "cb", "cc": "leg", "l": "Stelline + broccoli schiacciati + macinato di coniglio cotto nella pappa · a parte: bastoncini di zucca", "c": "Crema di avena + carota e patata schiacciate + lenticchie rosse passate · a parte: cimette di broccolo", "mm": "banana", "mp": "yogurt"}, {"d": "2026-11-10", "p": 1, "lc": "pes", "cc": "form", "l": "Crema di mais e tapioca + porro e patata *(nuovo)* schiacciati + platessa sfilacciata · a parte: cimette di cavolfiore", "c": "Anellini + cavolfiore schiacciato + robiola sciolta nella pappa · a parte: bastoncini di finocchio", "mm": "mela", "mp": "pera"}, {"d": "2026-11-11", "p": 1, "lc": "cr", "cc": "none", "l": "Multicereali + spinaci schiacciati + macinato di manzo cotto nella pappa · a parte: bastoncini di finocchio", "c": "Crema di riso + zucchine schiacciate · a parte: bastoncini di zucca", "mm": "banana", "mp": "yogurt"}, {"d": "2026-11-12", "p": 1, "lc": "leg", "cc": "pes", "l": "Crema di farro + bietola schiacciata + ceci passati · a parte: cimette di broccolo", "c": "Stelline + porro e patata schiacciati + orata sfilacciata · a parte: cimette di cavolfiore", "mm": "mela", "mp": "pera"}, {"d": "2026-11-13", "p": 1, "lc": "cb", "cc": "uovo", "l": "Crema di avena + zucca schiacciata + macinato di pollo cotto nella pappa · a parte: bastoncini di finocchio", "c": "Crema di mais e tapioca + broccoli schiacciati + tuorlo sodo sbriciolato · a parte: bastoncini di carota", "mm": "banana", "mp": "yogurt"}, {"d": "2026-11-14", "p": 1, "lc": "pes", "cc": "leg", "l": "Anellini + cavolo romanesco *(nuovo)* schiacciato + nasello sfilacciato · a parte: bastoncini di zucchina", "c": "Multicereali + carota e patata schiacciate + piselli passati · a parte: bastoncini di zucca", "mm": "mela", "mp": "pera"}, {"d": "2026-11-15", "p": 1, "lc": "cr", "cc": "none", "l": "Crema di riso + cavolfiore schiacciato + macinato di vitello cotto nella pappa · a parte: cimette di broccolo", "c": "Crema di farro + spinaci schiacciati · a parte: spicchi di patata", "mm": "banana", "mp": "yogurt"}, {"d": "2026-11-16", "p": 2, "lc": "cb", "cc": "leg", "l": "Stelline + zucchine schiacciate + polpettine morbide di tacchino · a parte: cimette di cavolfiore", "c": "Crema di avena + bietola schiacciata + lenticchie rosse schiacciate · a parte: bastoncini di finocchio", "mm": "mela", "mp": "yogurt"}, {"d": "2026-11-17", "p": 2, "lc": "pes", "cc": "form", "l": "Crema di mais e tapioca + porro e patata schiacciati + merluzzo sfilacciato · a parte: bastoncini di carota", "c": "Anellini + cavolo romanesco schiacciato + parmigiano grattugiato · a parte: bastoncini di zucchina", "mm": "pera", "mp": "banana"}, {"d": "2026-11-18", "p": 2, "lc": "cr", "cc": "none", "l": "Multicereali + verza e patata *(nuovo)* schiacciate + polpettine morbide di manzo · a parte: bastoncini di finocchio", "c": "Crema di riso + zucca schiacciata · a parte: cimette di broccolo", "mm": "mela", "mp": "yogurt"}, {"d": "2026-11-19", "p": 2, "lc": "leg", "cc": "pes", "l": "Crema di farro + broccoli schiacciati + ceci schiacciati · a parte: spicchi di patata", "c": "Stelline + carota e patata schiacciate + platessa sfilacciata · a parte: cimette di cavolfiore", "mm": "pera", "mp": "banana"}, {"d": "2026-11-20", "p": 2, "lc": "cb", "cc": "uovo", "l": "Crema di avena + cavolfiore schiacciato + polpettine morbide di coniglio · a parte: bastoncini di finocchio", "c": "Crema di mais e tapioca + spinaci schiacciati + tuorlo sodo sbriciolato · a parte: bastoncini di carota", "mm": "mela", "mp": "yogurt"}, {"d": "2026-11-21", "p": 2, "lc": "pes", "cc": "leg", "l": "Anellini + zucchine schiacciate + sogliola *(nuovo)* sfilacciata · a parte: bastoncini di zucca", "c": "Multicereali + bietola schiacciata + piselli schiacciati · a parte: cimette di broccolo", "mm": "pera", "mp": "banana"}, {"d": "2026-11-22", "p": 2, "lc": "cr", "cc": "none", "l": "Crema di riso + porro e patata schiacciati + polpettine morbide di vitello · a parte: cimette di cavolfiore", "c": "Crema di farro + cavolo romanesco schiacciato · a parte: bastoncini di finocchio", "mm": "mela", "mp": "yogurt"}, {"d": "2026-11-23", "p": 2, "lc": "cb", "cc": "leg", "l": "Stelline + verza e patata schiacciate + polpettine morbide di pollo · a parte: bastoncini di carota", "c": "Crema di avena + zucca schiacciata + lenticchie rosse schiacciate · a parte: bastoncini di zucchina", "mm": "pera", "mp": "yogurt"}, {"d": "2026-11-24", "p": 2, "lc": "pes", "cc": "form", "l": "Crema di mais e tapioca + broccoli schiacciati + orata sfilacciata · a parte: bastoncini di zucca", "c": "Anellini + carota e patata schiacciate + crescenza sciolta nella pappa · a parte: cimette di broccolo", "mm": "banana", "mp": "mela"}, {"d": "2026-11-25", "p": 2, "lc": "cr", "cc": "none", "l": "Crema d'orzo *(nuovo)* + cavolfiore schiacciato + polpettine morbide di manzo · a parte: bastoncini di finocchio", "c": "Multicereali + spinaci schiacciati · a parte: cimette di cavolfiore", "mm": "pera", "mp": "yogurt"}, {"d": "2026-11-26", "p": 2, "lc": "leg", "cc": "pes", "l": "Crema d'orzo + zucchine schiacciate + ceci schiacciati · a parte: bastoncini di finocchio", "c": "Crema di riso + bietola schiacciata + sogliola sfilacciata · a parte: bastoncini di carota", "mm": "banana", "mp": "mela"}, {"d": "2026-11-27", "p": 2, "lc": "cb", "cc": "uovo", "l": "Crema di farro + porro e patata schiacciati + polpettine morbide di tacchino · a parte: bastoncini di zucchina", "c": "Stelline + cavolo romanesco schiacciato + tuorlo sodo sbriciolato · a parte: bastoncini di zucca", "mm": "pera", "mp": "yogurt"}, {"d": "2026-11-28", "p": 2, "lc": "pes", "cc": "leg", "l": "Crema di avena + verza e patata schiacciate + nasello sfilacciato · a parte: cimette di broccolo", "c": "Crema di mais e tapioca + zucca schiacciata + piselli schiacciati · a parte: spicchi di patata", "mm": "cachi *(nuovo)*", "mp": "banana"}, {"d": "2026-11-29", "p": 2, "lc": "cr", "cc": "none", "l": "Anellini + broccoli schiacciati + polpettine morbide di vitello · a parte: cimette di cavolfiore", "c": "Multicereali + carota e patata schiacciate · a parte: bastoncini di finocchio", "mm": "cachi", "mp": "yogurt"}, {"d": "2026-11-30", "p": 2, "lc": "cb", "cc": "leg", "l": "Crema d'orzo + cavolfiore schiacciato + polpettine morbide di coniglio · a parte: bastoncini di carota", "c": "Crema di riso + spinaci schiacciati + lenticchie rosse schiacciate · a parte: bastoncini di zucchina", "mm": "mela", "mp": "yogurt"}, {"d": "2026-12-01", "p": 3, "lc": "pes", "cc": "form", "l": "Ditalini + zucchine a pezzetti + merluzzo a pezzetti · a parte: bastoncini di zucca", "c": "Farfalline + bietola a pezzetti + robiola · a parte: cimette di broccolo", "mm": "pera", "mp": "banana"}, {"d": "2026-12-02", "p": 3, "lc": "cr", "cc": "none", "l": "Riso + cavolo nero e patata *(nuovo)* a pezzetti + manzo cotto a lungo e sfilacciato · a parte: bastoncini di finocchio", "c": "Conchigliette + porro e patata a pezzetti · a parte: cimette di cavolfiore", "mm": "cachi", "mp": "yogurt"}, {"d": "2026-12-03", "p": 3, "lc": "leg", "cc": "pes", "l": "Polenta morbida + cavolo romanesco a pezzetti + ceci schiacciati · a parte: bastoncini di finocchio", "c": "Orzo perlato + verza e patata a pezzetti + platessa a pezzetti · a parte: bastoncini di carota", "mm": "mela", "mp": "pera"}, {"d": "2026-12-04", "p": 3, "lc": "cb", "cc": "uovo", "l": "Stelline + cavolo nero e patata a pezzetti + polpettine di pollo · a parte: bastoncini di zucchina", "c": "Couscous + zucca a pezzetti + tuorlo sodo a pezzetti · a parte: cimette di broccolo", "mm": "banana", "mp": "yogurt"}, {"d": "2026-12-05", "p": 3, "lc": "pes", "cc": "leg", "l": "Ditalini + broccoli a pezzetti + branzino *(nuovo)* a pezzetti · a parte: spicchi di patata", "c": "Farfalline + carota e patata a pezzetti + piselli schiacciati · a parte: cimette di cavolfiore", "mm": "cachi", "mp": "mela"}, {"d": "2026-12-06", "p": 3, "lc": "cr", "cc": "none", "l": "Riso + cavolfiore a pezzetti + polpettine di vitello · a parte: bastoncini di finocchio", "c": "Conchigliette + spinaci a pezzetti · a parte: bastoncini di carota", "mm": "pera", "mp": "yogurt"}, {"d": "2026-12-07", "p": 3, "lc": "cb", "cc": "leg", "l": "Polenta morbida + zucchine a pezzetti + polpettine di tacchino · a parte: bastoncini di zucca", "c": "Orzo perlato + bietola a pezzetti + lenticchie rosse schiacciate · a parte: cimette di broccolo", "mm": "banana", "mp": "yogurt"}, {"d": "2026-12-08", "p": 3, "lc": "pes", "cc": "form", "l": "Stelline + porro e patata a pezzetti + orata a pezzetti · a parte: cimette di cavolfiore", "c": "Couscous + cavolo romanesco a pezzetti + parmigiano grattugiato · a parte: bastoncini di finocchio", "mm": "clementina *(nuovo)*", "mp": "cachi"}, {"d": "2026-12-09", "p": 3, "lc": "cr", "cc": "none", "l": "Ditalini + verza e patata a pezzetti + manzo cotto a lungo e sfilacciato · a parte: bastoncini di finocchio", "c": "Farfalline + cavolo nero e patata a pezzetti · a parte: bastoncini di zucchina", "mm": "clementina", "mp": "yogurt"}, {"d": "2026-12-10", "p": 3, "lc": "leg", "cc": "pes", "l": "Riso + zucca a pezzetti + cannellini *(nuovo)* schiacciati · a parte: cimette di broccolo", "c": "Conchigliette + broccoli a pezzetti + sogliola a pezzetti · a parte: spicchi di patata", "mm": "mela", "mp": "pera"}, {"d": "2026-12-11", "p": 3, "lc": "cb", "cc": "uovo", "l": "Polenta morbida + carota e patata a pezzetti + coniglio cotto a lungo e sfilacciato · a parte: cimette di cavolfiore", "c": "Orzo perlato + cavolfiore a pezzetti + tuorlo sodo a pezzetti · a parte: bastoncini di finocchio", "mm": "banana", "mp": "yogurt"}, {"d": "2026-12-12", "p": 3, "lc": "pes", "cc": "leg", "l": "Stelline + spinaci a pezzetti + branzino a pezzetti · a parte: bastoncini di carota", "c": "Couscous + zucchine a pezzetti + ceci schiacciati · a parte: bastoncini di zucca", "mm": "cachi", "mp": "clementina"}, {"d": "2026-12-13", "p": 3, "lc": "cr", "cc": "none", "l": "Ditalini + bietola a pezzetti + polpettine di vitello · a parte: cimette di broccolo", "c": "Farfalline + porro e patata a pezzetti · a parte: cimette di cavolfiore", "mm": "kiwi *(nuovo)*", "mp": "yogurt"}, {"d": "2026-12-14", "p": 3, "lc": "cb", "cc": "leg", "l": "Riso + cavolo romanesco a pezzetti + polpettine di pollo · a parte: bastoncini di finocchio", "c": "Conchigliette + verza e patata a pezzetti + piselli schiacciati · a parte: bastoncini di carota", "mm": "kiwi", "mp": "yogurt"}, {"d": "2026-12-15", "p": 3, "lc": "pes", "cc": "form", "l": "Polenta morbida + cavolo nero e patata a pezzetti + nasello a pezzetti · a parte: bastoncini di zucchina", "c": "Orzo perlato + zucca a pezzetti + crescenza · a parte: cimette di broccolo", "mm": "mela", "mp": "pera"}, {"d": "2026-12-16", "p": 4, "lc": "cr", "cc": "none", "l": "Polpettine di vitello al sugo di pomodoro, purè di patate, cimette di broccolo", "c": "Minestrone di verdure di stagione con pastina, poco brodo", "mm": "banana", "mp": "yogurt"}, {"d": "2026-12-17", "p": 4, "lc": "leg", "cc": "pes", "l": "Pasta e ceci (ceci passati)", "c": "Merluzzo al forno a pezzetti con patate e carote schiacciate", "mm": "cachi", "mp": "clementina"}, {"d": "2026-12-18", "p": 4, "lc": "cb", "cc": "uovo", "l": "Pastina al pomodoro, polpettine morbide di pollo, zucchine a pezzetti", "c": "Tuorlo sodo sbriciolato con purè di patate e carote", "mm": "kiwi", "mp": "yogurt"}, {"d": "2026-12-19", "p": 4, "lc": "pes", "cc": "leg", "l": "Ditalini con orata, zucchine e pomodoro", "c": "Vellutata di lenticchie rosse con pane morbido", "mm": "mela", "mp": "pera"}, {"d": "2026-12-20", "p": 4, "lc": "cr", "cc": "none", "l": "Farfalline al ragù bianco di manzo con cavolfiore a pezzetti", "c": "Vellutata di zucca e carote con pane morbido", "mm": "banana", "mp": "yogurt"}, {"d": "2026-12-21", "p": 4, "lc": "cb", "cc": "leg", "l": "Risotto alla zucca con tacchino a dadini morbidi", "c": "Risotto con piselli e carote", "mm": "cachi", "mp": "yogurt"}, {"d": "2026-12-22", "p": 4, "lc": "pes", "cc": "form", "l": "Risotto con nasello e porro", "c": "Pasta con crema di zucca e robiola", "mm": "clementina", "mp": "kiwi"}, {"d": "2026-12-23", "p": 4, "lc": "cr", "cc": "none", "l": "Spezzatino di manzo cotto a lungo e sminuzzato, polenta morbida e carote", "c": "Risotto alle verdure", "mm": "mela", "mp": "yogurt"}, {"d": "2026-12-24", "p": 4, "lc": "leg", "cc": "pes", "l": "Pasta e cannellini (passati)", "c": "Vigilia: branzino a pezzetti con couscous e zucchine", "mm": "pera", "mp": "banana"}, {"d": "2026-12-25", "p": 4, "lc": "cb", "cc": "uovo", "l": "Natale: stelline nel brodo del cappone + cappone lesso sfilacciato + purè di patate", "c": "Frittatina morbida di tuorlo e spinaci con pastina all'olio", "mm": "cachi", "mp": "yogurt"}, {"d": "2026-12-26", "p": 4, "lc": "pes", "cc": "leg", "l": "Sogliola al vapore con riso e purè di zucca", "c": "Pasta e ceci (ceci passati)", "mm": "clementina", "mp": "kiwi"}, {"d": "2026-12-27", "p": 4, "lc": "cr", "cc": "none", "l": "Polpettine di vitello al sugo di pomodoro, purè di patate, cimette di broccolo", "c": "Passato di verdure con orzo", "mm": "mela", "mp": "yogurt"}, {"d": "2026-12-28", "p": 4, "lc": "cb", "cc": "leg", "l": "Pastina al pomodoro, polpettine morbide di pollo, zucchine a pezzetti", "c": "Vellutata di lenticchie rosse con pane morbido", "mm": "pera", "mp": "yogurt"}, {"d": "2026-12-29", "p": 4, "lc": "pes", "cc": "form", "l": "Merluzzo al forno a pezzetti con patate e carote schiacciate", "c": "Risotto con spinaci e crescenza", "mm": "banana", "mp": "cachi"}, {"d": "2026-12-30", "p": 4, "lc": "cr", "cc": "none", "l": "Farfalline al ragù bianco di manzo con cavolfiore a pezzetti", "c": "Minestrone di verdure di stagione con pastina, poco brodo", "mm": "clementina", "mp": "yogurt"}, {"d": "2026-12-31", "p": 4, "lc": "pes", "cc": "leg", "l": "Ditalini con orata, zucchine e pomodoro", "c": "San Silvestro: lenticchie rosse schiacciate con polenta morbida e carote", "mm": "kiwi", "mp": "mela"}];
+const CAT = {
+  cb: ["Carne bianca", "var(--c-cb)"], cr: ["Carne rossa", "var(--c-cr)"], pes: ["Pesce", "var(--c-pes)"],
+  leg: ["Legumi", "var(--c-leg)"], form: ["Formaggio", "var(--c-form)"], uovo: ["Tuorlo", "var(--c-uovo)"],
+  none: ["Senza proteina", "var(--c-none)"]
+};
+const PHASE = {
+  1: ["Pappa più densa", "Brodo 120–150 ml. Carne fresca macinata fine, cotta nella pappa al posto dell'omogeneizzato."],
+  2: ["Pappa risottata", "Brodo 80–100 ml. Pastina cotta come un risotto, polpettine morbide, legumi schiacciati."],
+  3: ["Piatto asciutto", "Al massimo 50 ml di acqua di cottura. Proteina a pezzetti a parte nel piatto."],
+  4: ["Piatto di famiglia", "Gli stessi piatti di mamma e papà, porzione tolta prima di salare e sminuzzata."]
+};
+const GIORNI = ["Domenica","Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato"];
+const GG = ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"];
+const MESI = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
+
+const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function fmt(s) {
+  let h = esc(s).replace(/ \*\(nuovo\)\*/g, ' <span class="new">nuovo</span>');
+  h = h.replace(/^(Natale|Vigilia|San Silvestro):\s*/, (m, f) => `<span class="fest">${f}</span> · `);
+  return h;
+}
+function splitSide(s) { const i = s.indexOf(" · a parte: "); return i < 0 ? [s, null] : [s.slice(0, i), s.slice(i + 12)]; }
+function parse(iso) { const [y,m,d] = iso.split("-").map(Number); return new Date(y, m-1, d); }
+function isoOf(dt) { return dt.getFullYear() + "-" + String(dt.getMonth()+1).padStart(2,"0") + "-" + String(dt.getDate()).padStart(2,"0"); }
+const TODAY = isoOf(new Date());
+const idxOf = iso => DATA.findIndex(x => x.d === iso);
+let cur = idxOf(TODAY);
+if (cur < 0) cur = TODAY < DATA[0].d ? 0 : DATA.length - 1;
+
+function mealCard(when, text, cat, main) {
+  const [dish, side] = splitSide(text);
+  const c = cat ? CAT[cat] : null;
+  return `<article class="meal ${main ? "main" : "snack"}" ${c ? `style="--cat:${c[1]}"` : ""}>
+    <div class="when">${when}</div>
+    <div class="what">
+      ${c ? `<div class="cat">${c[0]}</div>` : ""}
+      <div class="dish">${fmt(dish.charAt(0).toUpperCase() + dish.slice(1))}</div>
+      ${side ? `<div class="side">Con le mani: <b>${fmt(side)}</b></div>` : ""}
+    </div>
+  </article>`;
+}
+
+function renderDay() {
+  const x = DATA[cur], dt = parse(x.d);
+  document.getElementById("dtitle").textContent = `${GIORNI[dt.getDay()]} ${dt.getDate()} ${MESI[dt.getMonth()]}`;
+  const isToday = x.d === TODAY;
+  document.getElementById("kicker").textContent = isToday ? "Oggi" : "Menù di Camilla";
+  const chips = [`<span class="chip">Fase ${x.p} · ${PHASE[x.p][0]}</span>`];
+  if (!isToday && DATA.some(d => d.d === TODAY)) chips.push(`<button class="chip today" id="gotoday">Torna a oggi</button>`);
+  document.getElementById("dchips").innerHTML = chips.join("");
+  let note = PHASE[x.p][1];
+  if (TODAY < DATA[0].d && cur === 0) note = "Il piano parte domenica 1 novembre. " + note;
+  document.getElementById("dnote").textContent = note;
+  const pm = x.mp === "yogurt" ? "yogurt bianco intero" : x.mp;
+  document.getElementById("meals").innerHTML =
+    mealCard("Mattina", x.mm, null, false) +
+    mealCard("Pranzo", x.l, x.lc, true) +
+    mealCard("Pome­riggio", pm, null, false) +
+    mealCard("Cena", x.c, x.cc, true) +
+    mealCard("Nanna", "latte di mamma", null, false);
+  const meat = x.p >= 3 ? "30–40 g" : "30 g";
+  document.getElementById("dosebox").innerHTML = `<h3>Dosi per pasto</h3><ul>
+    <li>Cereale o pasta 30–40 g · verdura 60–80 g · olio 1 cucchiaino</li>
+    <li>Carne ${meat} · pesce 40–50 g · legumi secchi 15–20 g</li>
+    <li>Frutta 80–100 g · yogurt 60 g</li></ul>`;
+  document.getElementById("prev").disabled = cur === 0;
+  document.getElementById("next").disabled = cur === DATA.length - 1;
+  const g = document.getElementById("gotoday");
+  if (g) g.onclick = () => { cur = idxOf(TODAY); renderDay(); };
+}
+document.getElementById("prev").onclick = () => { if (cur > 0) { cur--; renderDay(); } };
+document.getElementById("next").onclick = () => { if (cur < DATA.length - 1) { cur++; renderDay(); } };
+let tx = null;
+document.getElementById("v-oggi").addEventListener("touchstart", e => { tx = e.touches[0].clientX; }, { passive: true });
+document.getElementById("v-oggi").addEventListener("touchend", e => {
+  if (tx === null) return; const dx = e.changedTouches[0].clientX - tx; tx = null;
+  if (Math.abs(dx) > 60) document.getElementById(dx < 0 ? "next" : "prev").click();
+});
+
+let month = (TODAY.slice(5,7) === "12") ? 12 : 11;
+function renderCal() {
+  document.getElementById("m11").setAttribute("aria-pressed", month === 11);
+  document.getElementById("m12").setAttribute("aria-pressed", month === 12);
+  const days = DATA.filter(x => Number(x.d.slice(5,7)) === month);
+  const weeks = []; let w = null;
+  days.forEach(x => {
+    const dt = parse(x.d);
+    if (!w || dt.getDay() === 1) { w = []; weeks.push(w); }
+    w.push(x);
+  });
+  document.getElementById("cal").innerHTML = weeks.map(wk => {
+    const a = parse(wk[0].d), b = parse(wk[wk.length-1].d);
+    return `<div class="week"><h3>${a.getDate() === b.getDate() ? "" : a.getDate() + "–"}${b.getDate()} ${MESI[b.getMonth()]} · fase ${wk[0].p}${wk[wk.length-1].p !== wk[0].p ? "–" + wk[wk.length-1].p : ""}</h3>` +
+      wk.map(x => {
+        const dt = parse(x.d);
+        const L = splitSide(x.l)[0], C = splitSide(x.c)[0];
+        return `<button class="row ${x.d === TODAY ? "is-today" : ""}" data-d="${x.d}">
+          <div><div class="dname">${GG[dt.getDay()]}</div><div class="dnum">${dt.getDate()}</div></div>
+          <div class="lines">
+            <div class="ln" style="--cat:${CAT[x.lc][1]}"><span class="dot"></span><span>${fmt(L)}</span></div>
+            <div class="ln" style="--cat:${CAT[x.cc][1]}"><span class="dot"></span><span>${fmt(C)}</span></div>
+          </div></button>`;
+      }).join("") + `</div>`;
+  }).join("");
+  document.querySelectorAll("#cal .row").forEach(r => r.onclick = () => { cur = idxOf(r.dataset.d); location.hash = "oggi"; show("oggi"); });
+}
+document.getElementById("m11").onclick = () => { month = 11; renderCal(); };
+document.getElementById("m12").onclick = () => { month = 12; renderCal(); };
+document.getElementById("legend").innerHTML = Object.values(CAT).map(c => `<span style="--cat:${c[1]}"><span class="dot" style="margin:0"></span>${c[0]}</span>`).join("") + `<span>Pranzo sopra, cena sotto</span>`;
+
+const PAT = [["Lunedì","cb","leg"],["Martedì","pes","form"],["Mercoledì","cr","none"],["Giovedì","leg","pes"],["Venerdì","cb","uovo"],["Sabato","pes","leg"],["Domenica","cr","none"]];
+document.getElementById("sched").innerHTML = `<span class="h">Giorno</span><span class="h">Pranzo</span><span class="h">Cena</span>` +
+  PAT.map(([g,a,b]) => `<span>${g}</span><span class="pill" style="--cat:${CAT[a][1]}"><span class="dot" style="margin:0"></span>${CAT[a][0]}</span><span class="pill" style="--cat:${CAT[b][1]}"><span class="dot" style="margin:0"></span>${CAT[b][0]}</span>`).join("");
+
+const VIEWS = ["oggi","calendario","dosi","consigli"];
+function show(v) {
+  if (!VIEWS.includes(v)) v = "oggi";
+  VIEWS.forEach(n => document.getElementById("v-" + n).classList.toggle("on", n === v));
+  document.querySelectorAll(".tabs a").forEach(a => a.toggleAttribute("aria-current", a.dataset.v === v) || a.dataset.v === v && a.setAttribute("aria-current","page"));
+  document.querySelectorAll(".tabs a").forEach(a => { if (a.dataset.v === v) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+  if (v === "oggi") renderDay();
+  if (v === "calendario") renderCal();
+  window.scrollTo(0, 0);
+}
+window.addEventListener("hashchange", () => show(location.hash.slice(1)));
+renderDay(); renderCal();
+show(location.hash.slice(1) || "oggi");
+// Aggiorna la vista "Oggi" quando l'app torna in primo piano in un altro giorno
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && isoOf(new Date()) !== TODAY) location.reload();
+});
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+}
+</script>
+</body>
+</html>
