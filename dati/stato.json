@@ -1,10 +1,14 @@
 {
  "v": 1,
- "updated": "2026-11-02T12:18:27.899Z",
+ "updated": "2026-11-02T12:39:47.411Z",
  "foods": {
   "v": 1,
   "items": [],
   "del": []
  },
- "checks": {}
+ "checks": {
+  "spesa:2026-11-01:banana": 1,
+  "spesa:2026-11-01:bietola": 1,
+  "spesa:2026-11-01:carote": 1
+ }
 }
