@@ -271,34 +271,36 @@ button.chip { border: 0; }
 <section class="view" id="v-alimenti" aria-label="Alimenti della dieta">
   <h1>Alimenti</h1>
   <p class="note">Gli alimenti che compongono la dieta di Camilla. Aggiungi, modifica o elimina: menù, dosi e spesa si aggiornano da soli.</p>
-  <div class="banner" id="importbanner" hidden>
-    <b>Hai ricevuto delle modifiche all'elenco degli alimenti.</b>
-    <p class="note" id="importinfo"></p>
-    <div class="actions">
-      <button class="btn primary" id="importok">Importa le modifiche</button>
-      <button class="btn" id="importno">Ignora</button>
+  <div class="card" id="synccard">
+    <h2>Sincronizza i due telefoni</h2>
+    <div class="chips"><span class="chip" id="syncstate">Non collegata</span></div>
+    <p class="note" id="syncinfo">Collegando i due telefoni, alimenti, dosi e spunte della spesa restano uguali su entrambi. I dati vengono salvati nel vostro repository GitHub Pasti-Cami.</p>
+    <div id="syncoff">
+      <ol class="steps">
+        <li><span><b>Crea un token su GitHub</b>Dal computer o dal browser: github.com → foto profilo → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token.</span></li>
+        <li><span><b>Dagli accesso solo a questo repository</b>Repository access: Only select repositories → Pasti-Cami. Permissions → Repository permissions → Contents: Read and write.</span></li>
+        <li><span><b>Incollalo qui</b>Genera il token, copialo (inizia con github_pat_) e incollalo qui sotto. Sull'altro telefono incolla il codice di collegamento che troverai qui dopo.</span></li>
+      </ol>
+      <div class="field">
+        <label for="synctoken">Token di GitHub o codice di collegamento</label>
+        <input id="synctoken" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…">
+      </div>
+      <div class="actions"><button class="btn primary" id="syncconnect">Collega</button></div>
     </div>
+    <div id="syncon" hidden>
+      <div class="actions">
+        <button class="btn primary" id="synccode">Copia il codice per l'altro telefono</button>
+        <button class="btn" id="syncnow">Aggiorna ora</button>
+        <button class="btn danger" id="syncoffbtn">Scollega</button>
+      </div>
+      <textarea id="sharefallback" hidden readonly aria-label="Codice da copiare"></textarea>
+      <p class="hint">Il codice contiene la chiave di accesso: mandalo solo alla tua compagna, per esempio in un messaggio privato. Sull'altro telefono aprite l'app, andate in Alimenti e incollatelo nel campo di collegamento.</p>
+    </div>
+    <p class="err" id="syncerr" hidden></p>
   </div>
   <div class="actions"><button class="btn primary" id="addfood">+ Aggiungi alimento</button></div>
   <div class="card" id="foods"></div>
-  <div class="card">
-    <h2>Condividi le modifiche</h2>
-    <p class="note">Le modifiche restano su questo telefono. Per averle anche sull'altro, copia il link e aprilo lì, oppure copia il codice e incollalo qui sotto sull'altro telefono.</p>
-    <div class="actions">
-      <button class="btn primary" id="sharelink">Copia il link</button>
-      <button class="btn" id="sharecode">Copia il codice</button>
-    </div>
-    <textarea id="sharefallback" hidden readonly aria-label="Link o codice da copiare"></textarea>
-    <div class="field">
-      <label for="pastecode">Incolla un codice ricevuto</label>
-      <textarea id="pastecode" placeholder="Incolla qui il codice o il link"></textarea>
-    </div>
-    <div class="actions">
-      <button class="btn" id="applycode">Importa il codice</button>
-      <button class="btn danger" id="resetall">Ripristina l'elenco iniziale</button>
-    </div>
-    <p class="err" id="codeerr" hidden></p>
-  </div>
+  <div class="actions"><button class="btn danger" id="resetall">Ripristina l'elenco iniziale</button></div>
 </section>
 
 <section class="view" id="v-dosi" aria-label="Dosi e schema">
@@ -621,16 +623,16 @@ function loadFoods() {
   return DEFAULTS.map(x => ({ ...x }));
 }
 // Il salvataggio contiene solo le differenze rispetto all'elenco iniziale: così è anche il codice da condividere
-function diffFoods() {
+function diffFoods(list = FOODS) {
   const items = [];
-  FOODS.forEach(f => {
+  list.forEach(f => {
     const d = DEFMAP[f.id];
     if (!d) { items.push({ ...f, _add: 1 }); return; }
     const ch = {};
     ["name","cat","dose","unit","from","intro","kind","ctype"].forEach(k => { if ((f[k] ?? null) !== (d[k] ?? null)) ch[k] = f[k] ?? null; });
     if (Object.keys(ch).length) items.push({ id: f.id, ...ch });
   });
-  const del = DEFAULTS.filter(d => !FOODS.some(f => f.id === d.id)).map(d => d.id);
+  const del = DEFAULTS.filter(d => !list.some(f => f.id === d.id)).map(d => d.id);
   return { v: 1, items, del };
 }
 function applyDiff(s) {
@@ -641,7 +643,10 @@ function applyDiff(s) {
   });
   return list.filter(f => f && f.id && f.name && CATS[f.cat]);
 }
-function saveFoods() { lsSet(STORE, JSON.stringify(diffFoods())); }
+const CHECKSTORE = "pappe-cami-spunte-v1";
+let CHECKS = (() => { try { return JSON.parse(lsGet(CHECKSTORE) || "{}") || {}; } catch (e) { return {}; } })();
+try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith("spesa:") && localStorage.getItem(k) === "1") CHECKS[k] = 1; } } catch (e) {}
+function saveFoods() { lsSet(STORE, JSON.stringify(diffFoods())); lsSet(CHECKSTORE, JSON.stringify(CHECKS)); }
 const food = id => FOODS.find(f => f.id === id);
 const doseOf = f => (f && f.dose != null && f.dose !== "") ? Number(f.dose) : (f ? (f.cat === "leg" && f.kind === "surg" ? 45 : CATS[f.cat].def) : 0);
 const unitOf = f => f.unit || CATS[f.cat].unit;
@@ -959,14 +964,18 @@ function renderShop() {
     const ks = Object.keys(A.tot).filter(k => meta(k).rep === rep).sort((a, c) => meta(a).name.localeCompare(meta(c).name, "it"));
     if (!ks.length) return;
     html += `<h3>${rep}</h3>` + ks.map(k => {
-      const [main, sub] = qty(k, A.tot[k]), note = itemNote(k, A), done = lsGet(keyBase + k) === "1";
+      const [main, sub] = qty(k, A.tot[k]), note = itemNote(k, A), done = !!CHECKS[keyBase + k];
       return `<label class="item ${done ? "done" : ""}"><input type="checkbox" id="chk-${esc(k)}" data-k="${esc(k)}" ${done ? "checked" : ""}>
         <span class="nm">${esc(meta(k).name)}${note ? `<small>${esc(note)}</small>` : ""}</span>
         <span class="q">${main}${sub ? `<small>${sub}</small>` : ""}</span></label>`;
     }).join("");
   });
   $("shop").innerHTML = html;
-  document.querySelectorAll("#shop input").forEach(c => c.onchange = () => { lsSet(keyBase + c.dataset.k, c.checked ? "1" : null); c.closest(".item").classList.toggle("done", c.checked); });
+  document.querySelectorAll("#shop input").forEach(c => c.onchange = () => {
+    const key = keyBase + c.dataset.k, on = c.checked;
+    c.closest(".item").classList.toggle("done", on);
+    change({ t: "check", key, on }, (on ? "Spesa: spuntato " : "Spesa: tolta spunta a ") + meta(c.dataset.k).name, true);
+  });
   $("prepintro").textContent = `Circa un'ora e mezza tra sabato e domenica copre la settimana del ${blockTitle(b)}.`;
   $("prep").innerHTML = prepSteps(b, A).map(([h, p]) => `<li><span><b>${esc(h)}</b>${esc(p)}</span></li>`).join("");
   $("copyfallback").hidden = true;
@@ -976,7 +985,7 @@ function shopText() {
   const b = BLOCKS[wk], A = aggregate(b), keyBase = "spesa:" + DATA[b.s].d + ":";
   const out = [`Spesa per Camilla · ${blockTitle(b)}`];
   REPARTI.forEach(rep => {
-    const ks = Object.keys(A.tot).filter(k => meta(k).rep === rep && lsGet(keyBase + k) !== "1").sort((a, c) => meta(a).name.localeCompare(meta(c).name, "it"));
+    const ks = Object.keys(A.tot).filter(k => meta(k).rep === rep && !CHECKS[keyBase + k]).sort((a, c) => meta(a).name.localeCompare(meta(c).name, "it"));
     if (!ks.length) return;
     out.push("", rep.toUpperCase());
     ks.forEach(k => { const [m, s] = qty(k, A.tot[k]); out.push(`- ${meta(k).name}: ${m}${s ? " (" + s + ")" : ""}`); });
@@ -989,7 +998,7 @@ async function copyText(txt, btn, fallbackId, okLabel) {
 }
 $("wprev").onclick = () => { if (wk > 0) { wk--; renderShop(); } };
 $("wnext").onclick = () => { if (wk < BLOCKS.length - 1) { wk++; renderShop(); } };
-$("reset").onclick = () => { const b = BLOCKS[wk], kb = "spesa:" + DATA[b.s].d + ":"; Object.keys(aggregate(b).tot).forEach(k => lsSet(kb + k, null)); renderShop(); };
+$("reset").onclick = () => { const b = BLOCKS[wk], kb = "spesa:" + DATA[b.s].d + ":"; change({ t: "uncheck", prefix: kb }, "Spesa: tolte le spunte della settimana del " + blockTitle(b)); };
 $("copy").onclick = () => copyText(shopText(), $("copy"), "copyfallback", "Lista copiata");
 
 // ================= Alimenti =================
@@ -1111,10 +1120,9 @@ $("editor").addEventListener("click", e => { if (e.target === $("editor")) close
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("editor").hidden) closeEditor(); });
 $("f-del").onclick = () => {
   if (!delArmed) { delArmed = true; $("f-del").textContent = "Tocca ancora per eliminare"; return; }
-  const f = food(editing);
-  FOODS = FOODS.filter(x => x.id !== editing);
-  const cat = f.cat;
-  saveFoods(); closeEditor(); refreshAll();
+  const f = food(editing), id = editing, cat = f.cat;
+  closeEditor();
+  change({ t: "del", id }, "Alimenti: eliminato " + f.name);
   toast(`${f.name} eliminato.` + (FOODS.some(x => x.cat === cat) ? "" : " Non restano alimenti in questa categoria: i pasti relativi useranno i legumi."));
 };
 $("edform").addEventListener("submit", e => {
@@ -1133,51 +1141,179 @@ $("edform").addEventListener("submit", e => {
   const upd = { name, cat, dose, unit: $("f-unit").value, from, intro: isNew ? $("f-intro").value.trim() : "" };
   if (cat === "leg") upd.kind = $("f-kind").value; else delete upd.kind;
   if (cat === "cer") upd.ctype = $("f-ctype").value;
-  let f;
-  if (editing) { f = food(editing); if (f.cat !== cat) { delete f.g; } Object.assign(f, upd); if (cat !== "leg") delete f.kind; }
-  else { f = { id: "u" + Date.now().toString(36), ...upd }; FOODS.push(f); }
   const wasNew = editing === null;
-  saveFoods(); closeEditor(); refreshAll();
+  const id = editing || "u" + Date.now().toString(36);
+  closeEditor();
+  change({ t: "upsert", id, isNew: wasNew, data: upd }, (wasNew ? "Alimenti: aggiunto " : "Alimenti: modificato ") + name);
+  const f = food(id);
   const fu = INTRO_DAY[f.id];
   toast(wasNew && !f.from ? `${f.name} aggiunto al menù.` : f.from && fu ? `${f.name}: prima volta ${longDate(fu)}.` : `${f.name} salvato.`);
 });
 $("addfood").onclick = () => openEditor(null);
 
-// ----- Condivisione -----
-function encode(obj) { const b = new TextEncoder().encode(JSON.stringify(obj)); let s = ""; b.forEach(c => s += String.fromCharCode(c)); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
-function decode(code) {
-  code = code.trim(); const m = code.match(/importa=([A-Za-z0-9_-]+)/); if (m) code = m[1];
-  const b = atob(code.replace(/-/g, "+").replace(/_/g, "/")); const u = new Uint8Array([...b].map(c => c.charCodeAt(0)));
-  const o = JSON.parse(new TextDecoder().decode(u)); if (!o || o.v !== 1) throw new Error("versione"); return o;
-}
-function describeDiff(d) {
-  const a = (d.items || []).filter(i => i._add).length, m = (d.items || []).filter(i => !i._add).length, x = (d.del || []).length;
-  return [a && `${a} aggiunti`, m && `${m} modificati`, x && `${x} eliminati`].filter(Boolean).join(", ") || "nessuna differenza dall'elenco iniziale";
-}
-$("sharelink").onclick = () => { const base = location.href.split("#")[0]; copyText(base + "#importa=" + encode(diffFoods()), $("sharelink"), "sharefallback", "Link copiato"); };
-$("sharecode").onclick = () => copyText(encode(diffFoods()), $("sharecode"), "sharefallback", "Codice copiato");
-function importDiff(d) { FOODS = applyDiff(d); saveFoods(); refreshAll(); toast("Elenco degli alimenti aggiornato: " + describeDiff(d) + "."); }
-$("applycode").onclick = () => {
-  try { const d = decode($("pastecode").value); importDiff(d); $("pastecode").value = ""; $("codeerr").hidden = true; }
-  catch (e) { $("codeerr").textContent = "Codice non valido: copialo di nuovo per intero dall'altro telefono."; $("codeerr").hidden = false; }
-};
 let resetArmed = false;
 $("resetall").onclick = () => {
   if (!resetArmed) { resetArmed = true; $("resetall").textContent = "Tocca ancora per confermare"; setTimeout(() => { resetArmed = false; $("resetall").textContent = "Ripristina l'elenco iniziale"; }, 4000); return; }
   resetArmed = false; $("resetall").textContent = "Ripristina l'elenco iniziale";
-  FOODS = DEFAULTS.map(x => ({ ...x })); saveFoods(); refreshAll(); toast("Elenco iniziale ripristinato.");
+  change({ t: "reset" }, "Alimenti: ripristinato l'elenco iniziale"); toast("Elenco iniziale ripristinato.");
 };
-let pendingImport = null;
-function checkImportHash() {
-  const h = location.hash.slice(1);
-  if (!h.startsWith("importa=")) return false;
-  try { pendingImport = decode(h); $("importinfo").textContent = "Contengono: " + describeDiff(pendingImport) + ". Sostituiscono l'elenco di questo telefono."; $("importbanner").hidden = false; }
-  catch (e) { toast("Il link di importazione non è valido."); }
-  try { history.replaceState(null, "", location.href.split("#")[0] + "#alimenti"); } catch (e) {}
-  return true;
+// ================= Sincronizzazione tra telefoni (GitHub, branch "dati") =================
+const REPO = "SevenGem27/Pasti-Cami", BRANCH = "dati", PATHF = "dati/stato.json";
+const API = `https://api.github.com/repos/${REPO}/contents/${PATHF}`;
+const SYNCSTORE = "pappe-cami-sync-v1";
+let SY = (() => { try { return JSON.parse(lsGet(SYNCSTORE) || "null"); } catch (e) { return null; } })() || {};
+if (!Array.isArray(SY.ops)) SY.ops = [];
+let pushing = false, pulling = false, pushTimer = null, pollTimer = null, syncMsg = "", syncBad = false;
+function saveSY() { lsSet(SYNCSTORE, JSON.stringify(SY)); }
+const b64e = str => { const b = new TextEncoder().encode(str); let s = ""; b.forEach(c => s += String.fromCharCode(c)); return btoa(s); };
+const b64d = b64 => new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/\s/g, "")), c => c.charCodeAt(0)));
+
+// Ogni modifica è un'operazione: si applica subito qui e poi, al momento dell'invio, sull'ultima versione online.
+function applyOp(st, o) {
+  if (o.t === "upsert") {
+    let x = st.foods.find(y => y.id === o.id);
+    if (!x) { if (!o.isNew) return; x = { id: o.id }; st.foods.push(x); }
+    if (x.cat && o.data.cat && x.cat !== o.data.cat) delete x.g;
+    Object.assign(x, o.data);
+    if (x.cat !== "leg") delete x.kind;
+  } else if (o.t === "del") st.foods = st.foods.filter(x => x.id !== o.id);
+  else if (o.t === "check") { if (o.on) st.checks[o.key] = 1; else delete st.checks[o.key]; }
+  else if (o.t === "uncheck") Object.keys(st.checks).forEach(k => { if (k.startsWith(o.prefix)) delete st.checks[k]; });
+  else if (o.t === "reset") st.foods = DEFAULTS.map(x => ({ ...x }));
+  else if (o.t === "replace") { st.foods = applyDiff(o.foods); st.checks = { ...(o.checks || {}) }; }
 }
-$("importok").onclick = () => { if (pendingImport) importDiff(pendingImport); pendingImport = null; $("importbanner").hidden = true; };
-$("importno").onclick = () => { pendingImport = null; $("importbanner").hidden = true; };
+const stateNow = () => ({ foods: FOODS.map(f => ({ ...f })), checks: { ...CHECKS } });
+const stateKey = st => JSON.stringify([diffFoods(st.foods), Object.keys(st.checks).sort()]);
+function setState(st) { FOODS = st.foods; CHECKS = st.checks; saveFoods(); refreshAll(); }
+function change(op, msg, quiet) {
+  const st = stateNow(); applyOp(st, op); setState(st);
+  if (SY.token) { SY.ops.push({ ...op, msg }); saveSY(); schedulePush(quiet ? 1500 : 300); syncUI(); }
+}
+function schedulePush(ms) { clearTimeout(pushTimer); pushTimer = setTimeout(push, ms); }
+
+async function gh(method, body, etag) {
+  const headers = { "Authorization": "Bearer " + SY.token, "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
+  if (etag) headers["If-None-Match"] = etag;
+  if (body) headers["Content-Type"] = "application/json";
+  return fetch(method === "GET" ? API + "?ref=" + BRANCH : API, { method, headers, body: body ? JSON.stringify(body) : undefined, cache: "no-store" });
+}
+function httpError(r) {
+  const e = new Error("http " + r.status); e.status = r.status; return e;
+}
+async function fetchRemote(useEtag) {
+  const r = await gh("GET", null, useEtag ? SY.etag : null);
+  if (r.status === 304) return { same: true };
+  if (!r.ok) throw httpError(r);
+  const j = await r.json();
+  const raw = JSON.parse(b64d(j.content));
+  return { sha: j.sha, etag: r.headers.get("ETag"), updated: raw.updated, state: { foods: applyDiff(raw.foods || {}), checks: raw.checks || {} } };
+}
+function explain(e) {
+  if (!e.status) return location.hostname.endsWith("github.io")
+    ? "Nessuna connessione: le modifiche restano su questo telefono e verranno inviate appena torna internet."
+    : "Da qui non riesco a raggiungere GitHub. La sincronizzazione funziona nell'app su sevengem27.github.io/Pasti-Cami.";
+  if (e.status === 401) return "Il token non è valido o è scaduto: creane uno nuovo e ricollega.";
+  if (e.status === 403) return "Il token non ha il permesso di scrivere: in GitHub imposta Contents su Read and write.";
+  if (e.status === 404) return "Il token non vede il repository Pasti-Cami: in GitHub, alla voce Repository access, scegli Pasti-Cami.";
+  return "GitHub ha risposto con un errore (" + e.status + "). Riprova tra poco.";
+}
+async function push() {
+  if (pushing || !SY.token || !SY.ops.length) return;
+  pushing = true; syncMsg = ""; syncUI();
+  try {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const remote = await fetchRemote(false);
+      const st = remote.state, ops = SY.ops.slice();
+      ops.forEach(o => applyOp(st, o));
+      const msgs = [...new Set(ops.map(o => o.msg).filter(Boolean))];
+      const body = {
+        message: (msgs.length === 1 ? msgs[0] : `${msgs.length} modifiche: ` + msgs.slice(0, 3).join("; ") + (msgs.length > 3 ? "…" : "")) || "Aggiorna dati",
+        content: b64e(JSON.stringify({ v: 1, updated: new Date().toISOString(), foods: diffFoods(st.foods), checks: st.checks }, null, 1)),
+        sha: remote.sha, branch: BRANCH
+      };
+      const r = await gh("PUT", body);
+      if (r.status === 409 || r.status === 422) continue; // qualcuno ha scritto nel frattempo: riprovo sull'ultima versione
+      if (!r.ok) throw httpError(r);
+      const j = await r.json();
+      SY.sha = j.content.sha; SY.etag = null; SY.at = new Date().toISOString(); syncBad = false;
+      SY.ops = SY.ops.slice(ops.length); saveSY();
+      const loc = st; SY.ops.forEach(o => applyOp(loc, o));
+      if (stateKey(loc) !== stateKey(stateNow())) setState(loc);
+      break;
+    }
+  } catch (e) { syncMsg = explain(e); syncBad = !!e.status; }
+  pushing = false; syncUI();
+  if (SY.ops.length && !syncMsg) schedulePush(1000);
+}
+async function pull(showToast = true) {
+  if (!SY.token || pulling || pushing) return;
+  if (SY.ops.length) return push();
+  pulling = true;
+  try {
+    const remote = await fetchRemote(true);
+    if (!remote.same) {
+      SY.sha = remote.sha; SY.etag = remote.etag;
+      if (remote.updated && stateKey(remote.state) !== stateKey(stateNow())) {
+        setState(remote.state);
+        if (showToast) toast("Aggiornato con le modifiche dell'altro telefono.");
+      }
+    }
+    SY.at = new Date().toISOString(); syncMsg = ""; syncBad = false; saveSY();
+  } catch (e) { syncMsg = explain(e); syncBad = !!e.status; }
+  pulling = false; syncUI();
+}
+async function connect(raw) {
+  let token = raw.trim();
+  const m = token.match(/^PAPPE1:([A-Za-z0-9+/=]+)$/);
+  if (m) { try { token = atob(m[1]); } catch (e) { token = ""; } }
+  if (!/^(github_pat_|ghp_)[A-Za-z0-9_]{20,}$/.test(token)) { syncMsg = "Non sembra un token di GitHub né un codice di collegamento: copialo di nuovo per intero."; syncUI(); return; }
+  SY = { token, ops: [] }; syncMsg = ""; $("syncconnect").disabled = true; $("syncconnect").textContent = "Collego…";
+  try {
+    const remote = await fetchRemote(false);
+    SY.sha = remote.sha; SY.etag = remote.etag; SY.at = new Date().toISOString();
+    if (!remote.updated) {
+      // Primo telefono collegato: l'elenco di questo telefono diventa quello condiviso
+      SY.ops.push({ t: "replace", foods: diffFoods(), checks: { ...CHECKS }, msg: "Primo collegamento: elenco alimenti e spunte" });
+      saveSY(); await push();
+      if (!syncMsg) toast("Collegato. Ora copia il codice e incollalo sull'altro telefono.");
+    } else {
+      saveSY(); setState(remote.state);
+      toast("Collegato: ora vedi l'elenco condiviso.");
+    }
+    $("synctoken").value = "";
+  } catch (e) { syncMsg = explain(e); SY = { ops: [] }; saveSY(); }
+  $("syncconnect").disabled = false; $("syncconnect").textContent = "Collega";
+  syncUI(); startPolling();
+}
+function syncUI() {
+  const on = !!SY.token;
+  $("syncoff").hidden = on; $("syncon").hidden = !on; $("syncinfo").hidden = on;
+  const st = $("syncstate");
+  if (!on) st.textContent = "Non collegata";
+  else if (pushing) st.textContent = "Invio in corso…";
+  else if (syncBad) st.textContent = "Da ricontrollare";
+  else if (SY.ops.length) st.textContent = "Modifiche in attesa di invio";
+  else st.textContent = SY.at ? `Collegata · aggiornata alle ${new Date(SY.at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}` : "Collegata";
+  st.classList.toggle("today", on && !syncBad && !SY.ops.length && !pushing);
+  $("syncerr").textContent = syncMsg; $("syncerr").hidden = !syncMsg;
+}
+function startPolling() {
+  clearInterval(pollTimer);
+  if (SY.token) pollTimer = setInterval(() => { if (document.visibilityState === "visible") pull(); }, 30000);
+}
+$("syncconnect").onclick = () => connect($("synctoken").value);
+$("synctoken").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); connect($("synctoken").value); } });
+$("syncnow").onclick = () => pull();
+$("synccode").onclick = () => copyText("PAPPE1:" + btoa(SY.token), $("synccode"), "sharefallback", "Codice copiato");
+let offArmed = false;
+$("syncoffbtn").onclick = () => {
+  if (!offArmed) { offArmed = true; $("syncoffbtn").textContent = "Tocca ancora per scollegare"; setTimeout(() => { offArmed = false; $("syncoffbtn").textContent = "Scollega"; }, 4000); return; }
+  offArmed = false; $("syncoffbtn").textContent = "Scollega";
+  SY = { ops: [] }; saveSY(); clearInterval(pollTimer); syncMsg = ""; syncUI();
+  toast("Telefono scollegato: l'elenco resta salvato qui.");
+};
+window.addEventListener("online", () => { if (SY.token) (SY.ops.length ? push() : pull()); });
+function syncInit() { syncUI(); if (SY.token) { startPolling(); pull(false); } }
 
 // ================= Navigazione =================
 const VIEWS = ["oggi","calendario","spesa","alimenti","dosi","consigli"];
@@ -1204,13 +1340,15 @@ function refreshAll() {
   wk = Math.min(wk, BLOCKS.length - 1);
   renderView();
 }
-window.addEventListener("hashchange", () => { if (!checkImportHash()) show(location.hash.slice(1)); else show("alimenti"); });
+window.addEventListener("hashchange", () => show(location.hash.slice(1)));
 
 generate(); buildBlocks(); setCurToday(); wk = defaultBlock();
 month = (TODAY.slice(5,7) === "12") ? 12 : 11;
-if (checkImportHash()) show("alimenti"); else show(location.hash.slice(1) || "oggi");
+show(location.hash.slice(1) || "oggi");
+syncInit();
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && isoOf(new Date()) !== TODAY) { TODAY = isoOf(new Date()); setCurToday(); renderView(); }
+  if (document.visibilityState === "visible") pull();
 });
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });

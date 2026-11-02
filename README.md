@@ -16,9 +16,19 @@ Dopo la prima apertura funziona anche senza connessione.
 - **Oggi:** i pasti del giorno, con frecce o swipe per cambiare giorno.
 - **Calendario:** novembre e dicembre settimana per settimana.
 - **Spesa:** la lista della spesa della settimana con le quantità, da spuntare o copiare, e le preparazioni da fare nel weekend.
-- **Alimenti:** l'elenco degli alimenti della dieta (cereali, proteine, vegetali). Puoi aggiungere, modificare o eliminare: menù, dosi e spesa si ricalcolano. Le modifiche si passano all'altro telefono con un link o un codice.
+- **Alimenti:** l'elenco degli alimenti della dieta (cereali, proteine, vegetali). Puoi aggiungere, modificare o eliminare: menù, dosi e spesa si ricalcolano. I due telefoni restano sincronizzati: vedi sotto.
 - **Dosi:** grammature per alimento, schema delle proteine e fasi delle consistenze.
 - **Consigli:** ricette base, sicurezza a tavola, cosa evitare e domande per la pediatra.
+
+## Sincronizzare i due telefoni
+
+Alimenti, dosi e spunte della spesa sono salvati nel file `dati/stato.json` del branch `dati` di questo repository. Ogni telefono ci accede con un token di GitHub:
+
+1. Su GitHub: Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token.
+2. Repository access: Only select repositories → Pasti-Cami. Permissions → Repository permissions → Contents: Read and write.
+3. Nell'app, sezione Alimenti, incolla il token e tocca Collega. Poi copia il codice per l'altro telefono e incollalo lì nello stesso campo.
+
+Il token resta solo sui telefoni e non va mai scritto nel repository.
 
 ## Aggiornare il menù
 
