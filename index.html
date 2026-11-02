@@ -1188,6 +1188,7 @@ function setState(st) { FOODS = st.foods; CHECKS = st.checks; saveFoods(); refre
 function change(op, msg, quiet) {
   const st = stateNow(); applyOp(st, op); setState(st);
   if (SY.token) { SY.ops.push({ ...op, msg }); saveSY(); schedulePush(quiet ? 1500 : 300); syncUI(); }
+  else if (SY.wasConnected) { SY.ops.push({ ...op, msg }); saveSY(); syncUI(); }
 }
 function schedulePush(ms) { clearTimeout(pushTimer); pushTimer = setTimeout(push, ms); }
 
@@ -1267,7 +1268,9 @@ async function connect(raw) {
   const m = token.match(/^PAPPE1:([A-Za-z0-9+/=]+)$/);
   if (m) { try { token = atob(m[1]); } catch (e) { token = ""; } }
   if (!/^(github_pat_|ghp_)[A-Za-z0-9_]{20,}$/.test(token)) { syncMsg = "Non sembra un token di GitHub né un codice di collegamento: copialo di nuovo per intero."; syncUI(); return; }
-  SY = { token, ops: [] }; syncMsg = ""; $("syncconnect").disabled = true; $("syncconnect").textContent = "Collego…";
+  const prevOps = SY.token ? SY.ops : (SY.ops || []); // modifiche fatte mentre il vecchio token non funzionava
+  const reconnect = !!SY.wasConnected;
+  SY = { token, ops: [], wasConnected: true }; syncMsg = ""; $("syncconnect").disabled = true; $("syncconnect").textContent = "Collego…";
   try {
     const remote = await fetchRemote(false);
     SY.sha = remote.sha; SY.etag = remote.etag; SY.at = new Date().toISOString();
@@ -1276,20 +1279,26 @@ async function connect(raw) {
       SY.ops.push({ t: "replace", foods: diffFoods(), checks: { ...CHECKS }, msg: "Primo collegamento: elenco alimenti e spunte" });
       saveSY(); await push();
       if (!syncMsg) toast("Collegato. Ora copia il codice e incollalo sull'altro telefono.");
+    } else if (reconnect && prevOps.length) {
+      // Ricollegamento: le modifiche rimaste in attesa vengono applicate sull'elenco condiviso e inviate
+      const st = remote.state; prevOps.forEach(o => applyOp(st, o)); setState(st);
+      SY.ops = prevOps; saveSY(); await push();
+      if (!syncMsg) toast("Ricollegato: inviate anche le modifiche rimaste in attesa.");
     } else {
       saveSY(); setState(remote.state);
-      toast("Collegato: ora vedi l'elenco condiviso.");
+      toast(reconnect ? "Ricollegato." : "Collegato: ora vedi l'elenco condiviso.");
     }
     $("synctoken").value = "";
-  } catch (e) { syncMsg = explain(e); SY = { ops: [] }; saveSY(); }
+  } catch (e) { syncMsg = explain(e); SY = { ops: prevOps, wasConnected: reconnect }; saveSY(); }
   $("syncconnect").disabled = false; $("syncconnect").textContent = "Collega";
   syncUI(); startPolling();
 }
 function syncUI() {
+  if (SY.token && syncBad && /scaduto/.test(syncMsg)) { SY = { ops: SY.ops, wasConnected: true }; saveSY(); clearInterval(pollTimer); }
   const on = !!SY.token;
   $("syncoff").hidden = on; $("syncon").hidden = !on; $("syncinfo").hidden = on;
   const st = $("syncstate");
-  if (!on) st.textContent = "Non collegata";
+  if (!on) st.textContent = SY.wasConnected ? (SY.ops.length ? `Da ricollegare · ${SY.ops.length} ${SY.ops.length === 1 ? "modifica" : "modifiche"} in attesa` : "Da ricollegare") : "Non collegata";
   else if (pushing) st.textContent = "Invio in corso…";
   else if (syncBad) st.textContent = "Da ricontrollare";
   else if (SY.ops.length) st.textContent = "Modifiche in attesa di invio";
@@ -1309,7 +1318,7 @@ let offArmed = false;
 $("syncoffbtn").onclick = () => {
   if (!offArmed) { offArmed = true; $("syncoffbtn").textContent = "Tocca ancora per scollegare"; setTimeout(() => { offArmed = false; $("syncoffbtn").textContent = "Scollega"; }, 4000); return; }
   offArmed = false; $("syncoffbtn").textContent = "Scollega";
-  SY = { ops: [] }; saveSY(); clearInterval(pollTimer); syncMsg = ""; syncUI();
+  SY = { ops: [] }; saveSY(); clearInterval(pollTimer); syncMsg = ""; syncBad = false; syncUI();
   toast("Telefono scollegato: l'elenco resta salvato qui.");
 };
 window.addEventListener("online", () => { if (SY.token) (SY.ops.length ? push() : pull()); });
