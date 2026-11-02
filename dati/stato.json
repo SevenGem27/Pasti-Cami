@@ -1,1 +1,10 @@
-{"v":1,"updated":null,"foods":{"v":1,"items":[],"del":[]},"checks":{}}
+{
+ "v": 1,
+ "updated": "2026-11-02T12:18:27.899Z",
+ "foods": {
+  "v": 1,
+  "items": [],
+  "del": []
+ },
+ "checks": {}
+}
