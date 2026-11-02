@@ -982,13 +982,13 @@ function renderShop() {
   $("copy").textContent = "Copia la lista";
 }
 function shopText() {
+  // Solo le cose da comprare con le quantità, una per riga, senza titolo né reparti
   const b = BLOCKS[wk], A = aggregate(b), keyBase = "spesa:" + DATA[b.s].d + ":";
-  const out = [`Spesa per Camilla · ${blockTitle(b)}`];
+  const out = [];
   REPARTI.forEach(rep => {
-    const ks = Object.keys(A.tot).filter(k => meta(k).rep === rep && !CHECKS[keyBase + k]).sort((a, c) => meta(a).name.localeCompare(meta(c).name, "it"));
-    if (!ks.length) return;
-    out.push("", rep.toUpperCase());
-    ks.forEach(k => { const [m, s] = qty(k, A.tot[k]); out.push(`- ${meta(k).name}: ${m}${s ? " (" + s + ")" : ""}`); });
+    Object.keys(A.tot).filter(k => meta(k).rep === rep && !CHECKS[keyBase + k])
+      .sort((a, c) => meta(a).name.localeCompare(meta(c).name, "it"))
+      .forEach(k => { const [m, s] = qty(k, A.tot[k]); out.push(`${meta(k).name}: ${m}${s ? " (" + s + ")" : ""}`); });
   });
   return out.join("\n");
 }

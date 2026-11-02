@@ -1,6 +1,6 @@
 // Service worker: rende l'app disponibile anche senza connessione.
 // Cambiare VERSION a ogni aggiornamento del menù per far scaricare la nuova versione.
-const VERSION = "pappe-cami-v7";
+const VERSION = "pappe-cami-v8";
 const SHELL = [
   "./",
   "./index.html",
