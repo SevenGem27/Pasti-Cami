@@ -1,9 +1,20 @@
 {
  "v": 1,
- "updated": "2026-11-02T12:39:51.893Z",
+ "updated": "2026-11-07T11:17:32.132Z",
  "foods": {
   "v": 1,
-  "items": [],
+  "items": [
+   {
+    "id": "umw6b75hh",
+    "name": "Ricorra",
+    "cat": "verd",
+    "dose": null,
+    "unit": "g",
+    "from": "2026-11-21",
+    "intro": "Proponilo a pranzo, all'inizio in piccola quantità e accanto a qualcosa che mangia volentieri. Aumenta nei giorni successivi e aspetta 2–3 giorni prima di un'altra novità.",
+    "_add": 1
+   }
+  ],
   "del": []
  },
  "checks": {}
